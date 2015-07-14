@@ -58,6 +58,19 @@ impl DB {
             self.delete(table, range)
         }
     }
+
+    pub fn to_flat(&self) -> BTreeMap<String,BTreeMap<(u64,u64),Vec<u8>>>{
+        let mut res = BTreeMap::new();
+        for (tbl, tags) in self.map.iter(){
+            let mut tagmap = BTreeMap::new();
+            for (range,data) in tags.range(0,0xff_ff_ff_ff__ff_ff_ff_ff) {
+                let range_tup = (range.min,range.max);
+                tagmap.insert(range_tup, data.clone());
+            }
+            res.insert(tbl.clone(),tagmap);
+        }
+        return res;
+    }
 }
 
 #[test]
