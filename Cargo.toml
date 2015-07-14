@@ -3,7 +3,7 @@ name = "tag_db"
 version = "0.1.0"
 authors = ["coco <coco@hexgolems.com>"]
 
-description = "A simple Interval Tree implementation"
+description = "Using interval trees to create a simple interval database"
 
 # These URLs point to more information about the repository
 #documentation = "..."
@@ -24,6 +24,6 @@ license = "GPL-2.0"
 [dependencies.interval_tree]
 git = "file:/home/me/proggen/rust/interval_tree"
 
-[lib]
-name = "tag_db"
-crate-type = ["dylib"]
+#[lib]
+#name = "tag_db"
+#crate-type = ["dylib"]
