@@ -1,3 +1,6 @@
+#![feature(drain)]
+#![feature(convert)]
+
 pub mod db;
 mod serialize;
 

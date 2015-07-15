@@ -4,6 +4,7 @@ use self::interval_tree::Range;
 use self::interval_tree::IntervalTree;
 use self::interval_tree::RangePairIter;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 
 pub struct DB {
@@ -14,6 +15,7 @@ impl DB {
     pub fn new() -> DB{
         return DB{map: BTreeMap::new()}
     }
+
 
     pub fn insert(&mut self, table: String, r: Range, d: Vec<u8>){
         {
@@ -36,8 +38,8 @@ impl DB {
         self.map.contains_key(table)
     }
 
-    pub fn query(&mut self, table: &String, r:Range) -> Option<interval_tree::RangePairIter<Vec<u8>>>{
-        match self.map.get_mut(table) {
+    pub fn query(&self, table: &String, r:Range) -> Option<interval_tree::RangePairIter<Vec<u8>>>{
+        match self.map.get(table) {
             Some(tree) => Some(tree.range(r.min,r.max)),
             None => None
         }
@@ -59,10 +61,10 @@ impl DB {
         }
     }
 
-    pub fn to_flat(&self) -> BTreeMap<String,BTreeMap<(u64,u64),Vec<u8>>>{
-        let mut res = BTreeMap::new();
+    pub fn to_flat(&self) -> HashMap<String,HashMap<(u64,u64),Vec<u8>>>{
+        let mut res = HashMap::new();
         for (tbl, tags) in self.map.iter(){
-            let mut tagmap = BTreeMap::new();
+            let mut tagmap = HashMap::new();
             for (range,data) in tags.range(0,0xff_ff_ff_ff__ff_ff_ff_ff) {
                 let range_tup = (range.min,range.max);
                 tagmap.insert(range_tup, data.clone());
@@ -71,6 +73,19 @@ impl DB {
         }
         return res;
     }
+
+    pub fn new_from_flat(mut flat: HashMap<String,HashMap<(u64,u64),Vec<u8>>> ) -> DB{
+        let mut res = DB::new();
+
+        for (tbl, mut tags) in flat.drain(){
+            for (key, data) in tags.drain(){
+                let (min,max) = key;
+                res.insert(tbl.clone(), Range::new(min,max), data);
+            }
+        }
+        return res;
+    }
+
 }
 
 #[test]
