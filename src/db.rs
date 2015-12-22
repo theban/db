@@ -67,19 +67,19 @@ impl DB {
         }
     }
 
-    pub fn save_to_file(&self, filename: &String) -> io::Result<()>{
-        let mut f = try!(File::create(filename));
-        try!(f.write_all( serialize::serialize(self).as_slice() ));
-        Ok(())
-    }
+    //pub fn save_to_file(&self, filename: &String) -> io::Result<()>{
+    //    let mut f = try!(File::create(filename));
+    //    try!(f.write_all( serialize::serialize(self).as_slice() ));
+    //    Ok(())
+    //}
 
-    pub fn new_from_file(filename: &String) -> io::Result<DB>{
-        let mut f = try!(File::open(filename));
-        let mut buf = Vec::new();
-        try!(f.read_to_end(&mut buf));
-        let db = serialize::deserialize(buf);
-        Ok(db)
-    }
+    //pub fn new_from_file(filename: &String) -> io::Result<DB>{
+    //    let mut f = try!(File::open(filename));
+    //    let mut buf = Vec::new();
+    //    try!(f.read_to_end(&mut buf));
+    //    let db = serialize::deserialize(buf);
+    //    Ok(db)
+    //}
 
     pub fn to_flat(&self) -> HashMap<String,HashMap<(u64,u64),Vec<u8>>>{
         let mut res = HashMap::new();
