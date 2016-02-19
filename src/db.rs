@@ -8,11 +8,6 @@ use serialize;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
-use std::io;
-use std::io::prelude::*;
-use std::fs::File;
-
-
 pub struct DB {
     map: BTreeMap<String,IntervalTree<Vec<u8>>>
 }
@@ -23,20 +18,20 @@ impl DB {
     }
 
 
-    pub fn insert(&mut self, table: String, r: Range, d: Vec<u8>){
+    pub fn insert(&mut self, table: &String, r: Range, d: Vec<u8>){
         {
-            let mut tab = self.map.get_mut(&table);
+            let mut tab = self.map.get_mut(table);
             if let Some(ref mut tree) = tab { tree.insert(r,d); return }
         }
         let mut tree = IntervalTree::new();
         tree.insert(r,d);
-        self.map.insert(table,tree);
+        self.map.insert(table.clone(),tree);
     }
 
-    pub fn add_table(&mut self, table: String){
+    pub fn add_table(&mut self, table: &String){
         if !self.has_table(&table) {
             let tree = IntervalTree::new();
-            self.map.insert(table,tree);
+            self.map.insert(table.clone(),tree);
         }
     }
 
@@ -67,19 +62,6 @@ impl DB {
         }
     }
 
-    //pub fn save_to_file(&self, filename: &String) -> io::Result<()>{
-    //    let mut f = try!(File::create(filename));
-    //    try!(f.write_all( serialize::serialize(self).as_slice() ));
-    //    Ok(())
-    //}
-
-    //pub fn new_from_file(filename: &String) -> io::Result<DB>{
-    //    let mut f = try!(File::open(filename));
-    //    let mut buf = Vec::new();
-    //    try!(f.read_to_end(&mut buf));
-    //    let db = serialize::deserialize(buf);
-    //    Ok(db)
-    //}
 
     pub fn to_flat(&self) -> HashMap<String,HashMap<(u64,u64),Vec<u8>>>{
         let mut res = HashMap::new();
@@ -94,17 +76,6 @@ impl DB {
         return res;
     }
 
-    pub fn new_from_flat(mut flat: HashMap<String,HashMap<(u64,u64),Vec<u8>>> ) -> DB{
-        let mut res = DB::new();
-
-        for (tbl, mut tags) in flat.drain(){
-            for (key, data) in tags.drain(){
-                let (min,max) = key;
-                res.insert(tbl.clone(), Range::new(min,max), data);
-            }
-        }
-        return res;
-    }
 
 }
 
@@ -112,9 +83,9 @@ impl DB {
 fn test_db() {
     let mut db = DB::new();
     let tbl = "foo".to_string();
-    db.insert(tbl.clone(),Range::new(3,4),"foo".to_string().into_bytes());
-    db.insert(tbl.clone(),Range::new(4,5),"foo".to_string().into_bytes());
-    db.insert(tbl.clone(),Range::new(5,6),"foo".to_string().into_bytes());
+    db.insert(&tbl,Range::new(3,4),"foo".to_string().into_bytes());
+    db.insert(&tbl,Range::new(4,5),"foo".to_string().into_bytes());
+    db.insert(&tbl,Range::new(5,6),"foo".to_string().into_bytes());
     let mut is = db.query(&tbl,Range::new(4,4)).unwrap().map(|(r,_)| r.clone()).collect::<Vec<Range>>();
     assert_eq!(is, vec!( Range::new(3,4), Range::new(4,5) ));
     db.delete_all(&tbl,Range::new(3,4));
