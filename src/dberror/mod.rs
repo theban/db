@@ -46,8 +46,8 @@ impl<'a> From<std::io::Error> for DBError<'a> {
     }
 }
 
-impl<'a,T> From<std::sync::PoisonError<T>> for DBError<'a> {
-    fn from(err: std::sync::PoisonError<T>) -> DBError<'a> {
+impl<'a, T> From<std::sync::PoisonError<T>> for DBError<'a> {
+    fn from(_: std::sync::PoisonError<T>) -> DBError<'a> {
         DBError::SyncError
     }
 }
@@ -58,9 +58,9 @@ impl<'a> fmt::Display for DBError<'a> {
             DBError::ProtocolError(ref err) => write!(f, "Protocol Error: {}", err),
             DBError::FileFormatError(ref err) => write!(f, "FileFormat Error: {}", err),
             DBError::ParseStringError(ref err) => write!(f, "Parse String Error: {}", err),
-            DBError::ParseValueError(ref err) => write!(f,  "Parse Value Error: {}", err),
-            DBError::SendValueError(ref err) => write!(f,  "Send Value Error: {}", err),
-            DBError::UTF8Error(ref err) => write!(f,  "UTF8 Error: {}", err),
+            DBError::ParseValueError(ref err) => write!(f, "Parse Value Error: {}", err),
+            DBError::SendValueError(ref err) => write!(f, "Send Value Error: {}", err),
+            DBError::UTF8Error(ref err) => write!(f, "UTF8 Error: {}", err),
             DBError::IOError(ref err) => write!(f, "IO error: {}", err),
             DBError::SyncError => write!(f, "Sync error"),
         }
@@ -70,27 +70,27 @@ impl<'a> fmt::Display for DBError<'a> {
 impl<'a> error::Error for DBError<'a> {
     fn description(&self) -> &str {
         match *self {
-            DBError::ProtocolError(ref desc)     => desc,
+            DBError::ProtocolError(ref desc) => desc,
             DBError::FileFormatError(ref desc) => desc,
-            DBError::ParseStringError(ref err)  => err.description(),
-            DBError::ParseValueError(ref err)   => err.description(), 
-            DBError::SendValueError(ref err)   => err.description(), 
-            DBError::UTF8Error(ref err)        => err.description(), 
-            DBError::IOError(ref err)           => err.description(), 
-            DBError::SyncError           => "one thread paniced while holding a lock to the db",
+            DBError::ParseStringError(ref err) => err.description(),
+            DBError::ParseValueError(ref err) => err.description(), 
+            DBError::SendValueError(ref err) => err.description(), 
+            DBError::UTF8Error(ref err) => err.description(), 
+            DBError::IOError(ref err) => err.description(), 
+            DBError::SyncError => "one thread paniced while holding a lock to the db",
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
-            DBError::ProtocolError(_)           => None,
-            DBError::FileFormatError(_)         => None,
-            DBError::ParseStringError(ref err)  => Some(err), 
-            DBError::ParseValueError(ref err)   => Some(err), 
-            DBError::SendValueError(ref err)    => Some(err), 
-            DBError::UTF8Error(ref err)         => Some(err), 
-            DBError::IOError(ref err)           => Some(err), 
-            DBError::SyncError                  => None,
+            DBError::ProtocolError(_) => None,
+            DBError::FileFormatError(_) => None,
+            DBError::ParseStringError(ref err) => Some(err), 
+            DBError::ParseValueError(ref err) => Some(err), 
+            DBError::SendValueError(ref err) => Some(err), 
+            DBError::UTF8Error(ref err) => Some(err), 
+            DBError::IOError(ref err) => Some(err), 
+            DBError::SyncError => None,
         }
     }
 }
