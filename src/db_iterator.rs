@@ -17,11 +17,11 @@ impl<'a> BitmapSliceIter<'a> {
 
 impl<'a> Iterator for BitmapSliceIter<'a> {
 
-    type Item = (&'a Range,BitmapSlice<'a>);
+    type Item = (Range,BitmapSlice<'a>);
 
-    fn next(&mut self) -> Option<(&'a Range,BitmapSlice<'a>)> {
+    fn next(&mut self) -> Option<(Range,BitmapSlice<'a>)> {
         if let Some(n) =  self.orig.get_next_node() {
-            return Some(( &n.key, n.data.to_subslice(n.key, self.orig_rng)) )
+            return Some(( n.key.get_intersection(&self.orig_rng), n.data.to_subslice(n.key, self.orig_rng)) )
         }
         return None
     }

@@ -86,22 +86,19 @@ impl DB {
 
     fn delete_bitmaps_from_tree(&mut self, table: &String, bitmaps: &Vec<(Range, Bitmap)>) {
         for &(rng, _) in bitmaps {
-            self.bit_map.get_mut(table).map(|mut tree| { println!("real delete rng: {:?}", rng); tree.delete(rng) });
+            self.bit_map.get_mut(table).map(|mut tree| { tree.delete(rng) });
         };
     }
 
     fn insert_bitmap(&mut self, table: &String, r: Range, d: Bitmap) {
-            println!("insert: {:?} {:?}", &r, &d);
             assert_eq!(d.data.len() as u64, d.entry_size * r.len());
             self.add_table(table);
 
             let merge_partners = self.get_overlaping_bitmaps(table, extend_range(r), d.entry_size);
 
-            println!("merge partners: {:?}", &merge_partners);
             self.delete_bitmaps_from_tree(table, &merge_partners);
             let (new_range, new_bitmap) = d.merge_bitmaps(r, merge_partners);
 
-            println!("new data: {:?} {:?}", &new_range, &new_bitmap);
             let mut tree = self.bit_map.get_mut(table).unwrap();
             tree.insert(new_range, new_bitmap);
     }
@@ -188,12 +185,12 @@ fn test_bitmaps_insert() {
     let tbl = "tbl".to_string();
 
     db.insert_bitmap(&tbl,
-              Range::new(2, 8),
+              Range::new(2, 7),
               Bitmap{ entry_size: 1, data: "foofoo".into() }
               );
 
     db.insert_bitmap(&tbl,
-              Range::new(5, 11),
+              Range::new(5, 10),
               Bitmap{ entry_size: 1, data: "barbar".into() }
               );
 
@@ -202,10 +199,10 @@ fn test_bitmaps_insert() {
                    .map(|(r, data)| (r.clone(), data.to_bitmap() ) )
                    .collect::<Vec<(Range,Bitmap)>>();
 
-    assert_eq!(is, vec![(Range::new(2, 11), Bitmap{entry_size: 1, data: "foobarbar".into() } ) ]);
+    assert_eq!(is, vec![(Range::new(2, 10), Bitmap{entry_size: 1, data: "foobarbar".into() } ) ]);
 
     db.insert_bitmap(&tbl,
-              Range::new(7, 10),
+              Range::new(7, 9),
               Bitmap{ entry_size: 1, data: "goo".into() }
               );
 
@@ -214,10 +211,10 @@ fn test_bitmaps_insert() {
                    .map(|(r, data)| (r.clone(), data.to_bitmap() ))
                    .collect::<Vec<(Range,Bitmap)>>();
 
-    assert_eq!(is, vec![(Range::new(2, 11), Bitmap{entry_size: 1, data: "foobagoor".into() } ) ]);
+    assert_eq!(is, vec![(Range::new(2, 10), Bitmap{entry_size: 1, data: "foobagoor".into() } ) ]);
 
     db.insert_bitmap(&tbl,
-              Range::new(7, 10),
+              Range::new(7, 9),
               Bitmap{ entry_size: 2, data: "googoo".into() }
               );
 
@@ -227,10 +224,9 @@ fn test_bitmaps_insert() {
                    .collect::<Vec<(Range,Bitmap)>>();
 
     assert_eq!(is, vec![
-               (Range::new(2, 11), Bitmap{entry_size: 1, data: "foobagoor".into() } ), 
-               (Range::new(7, 10), Bitmap{entry_size: 2, data: "googoo".into() } )
+               (Range::new(2, 10), Bitmap{entry_size: 1, data: "foobagoor".into() } ), 
+               (Range::new(7, 9), Bitmap{entry_size: 2, data: "googoo".into() } )
                ]);
-
 
     let is = db.query_bitmap(&tbl, Range::new(0, 3))
                    .unwrap()
