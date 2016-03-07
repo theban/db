@@ -1,7 +1,9 @@
 extern crate rmp;
 extern crate interval_tree;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
+use std::u64;
+use std::u32;
 
 use std::io::prelude::*;
 use std::io::Cursor;
@@ -9,51 +11,20 @@ use std::fs::File;
 
 
 use db::DB;
-use db::Content;
+use content::Bitmap;
+use content::Object;
 use dberror::DBError;
 use self::interval_tree::Range;
+use self::interval_tree::IntervalTree;
 
-fn write_vec<'a>(vec: Vec<u8>, mut w: &mut Write) -> Result<(), DBError<'a>> {
+trait Serialized where Self:Sized{
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>>;
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>>;
+}
+
+fn write_vec<'a>(vec: &Vec<u8>, mut w: &mut Write) -> Result<(), DBError<'a>> {
     try!(rmp::encode::write_str_len(&mut w, vec.len() as u32));
-    try!(w.write_all(&vec));
-    return Ok(());
-}
-
-fn write_content<'a>(data: Content, mut w: &mut Write) -> Result<(), DBError<'a>> {
-    match data {
-        Content::Data(vec) => try!(write_vec(vec, &mut w)),
-        Content::BitMap{datasize: ds, data: vec} => {
-            try!(rmp::encode::write_array_len(&mut w, 2));
-            try!(rmp::encode::write_uint(&mut w, ds));
-            try!(write_vec(vec, &mut w))
-        }
-    }
-    return Ok(());
-}
-
-fn write_table<'a>(name: String,
-                   data: HashMap<(u64, u64), Content>,
-                   mut w: &mut Write)
-                   -> Result<(), DBError<'a>> {
-    try!(rmp::encode::write_str_len(&mut w, name.len() as u32));
-    try!(w.write_all(&name.as_ref()));
-    try!(rmp::encode::write_array_len(&mut w, data.len() as u32));
-    for ((min, max), val) in data {
-        try!(rmp::encode::write_array_len(&mut w, 3));
-        try!(rmp::encode::write_uint(&mut w, min));
-        try!(rmp::encode::write_uint(&mut w, max));
-        try!(write_content(val, &mut w))
-    }
-    return Ok(());
-}
-
-fn write_flat<'a>(flat: HashMap<String, HashMap<(u64, u64), Content>>,
-                  mut w: &mut Write)
-                  -> Result<(), DBError<'a>> {
-    try!(rmp::encode::write_map_len(&mut w, flat.len() as u32));
-    for (tbl, data) in flat {
-        try!(write_table(tbl, data, &mut w));
-    }
+    try!(w.write_all(vec));
     return Ok(());
 }
 
@@ -80,113 +51,152 @@ fn parse_range<'a>(mut r: &mut Read) -> Result<Range, DBError<'a>> {
     return Ok(Range::new(min, max));
 }
 
-fn parse_content_data<'a>(mut r: &mut Read) -> Result<(Range, Content), DBError<'a>> {
-    let rng = try!(parse_range(&mut r));
-    let data = Content::Data(try!(parse_bindata(&mut r)));
-    return Ok((rng, data));
-}
-
-fn parse_content_bitmap<'a>(mut r: &mut Read) -> Result<(Range, Content), DBError<'a>> {
-    let rng = try!(parse_range(&mut r));
-    let ds = try!(rmp::decode::read_u64_loosely(&mut r));
-    let vec = try!(parse_bindata(&mut r));
-    let data = Content::BitMap {
-        datasize: ds,
-        data: vec,
-    };
-    return Ok((rng, data));
-}
-
-fn parse_content<'a>(mut stream: &mut Read) -> Result<(Range, Content), DBError<'a>> {
-    let content_len = try!(rmp::decode::read_array_size(&mut stream));
-    match content_len {
-        3 => return parse_content_data(&mut stream),
-        4 => return parse_content_bitmap(&mut stream),
-        _ => {}
+impl Serialized for Bitmap {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+        try!(rmp::encode::write_array_len(&mut w, 2));
+        try!(rmp::encode::write_uint(&mut w, self.entry_size));
+        try!(write_vec(&self.data, &mut w));
+        return Ok(())
     }
-    return Err(DBError::FileFormatError("Invalid ContentLength/Contenttype".into()));
-}
 
-fn read_table<'a>(db: &mut DB, name: String, mut r: &mut Read) -> Result<(), DBError<'a>> {
-    let len = try!(rmp::decode::read_array_size(&mut r));
-    for _ in 0..len {
-        let (rng, data) = try!(parse_content(&mut r));
-        db.insert(&name, rng, data);
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+        let ds = try!(rmp::decode::read_u64_loosely(&mut r));
+        let vec = try!(parse_bindata(&mut r));
+        let data = Bitmap{entry_size: ds, data:vec};
+        return Ok( data );
     }
-    return Ok(());
 }
 
-#[must_use]
-fn read_db<'a>(mut db: &mut DB, mut r: &mut Read) -> Result<(), DBError<'a>> {
-    let len = try!(rmp::decode::read_map_size(&mut r));
-    for _ in 0..len {
-        let tbl_name = try!(parse_string(&mut r));
-        try!(read_table(&mut db, tbl_name, &mut r));
+impl Serialized for Object {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+        try!(write_vec(&self.data, &mut w));
+        return Ok(())
     }
-    return Ok(());
+
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+        let vec = try!(parse_bindata(&mut r));
+        let data = Object{data: vec};
+        return Ok( data );
+    }
+
 }
 
-#[must_use]
-fn write_db<'a>(db: &DB, mut w: &mut Write) -> Result<(), DBError<'a>> {
-    let flat = db.to_flat();
-    try!(write_flat(flat, &mut w));
-    return Ok(());
+impl<T: Serialized> Serialized for IntervalTree<T> {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+        let len = self.range(0, u64::MAX).count() as u64;
+        assert!(3*len < u32::MAX as u64);
+        try!(rmp::encode::write_array_len(&mut w, 3*len as u32));
+        for (range, data) in self.range(0, u64::MAX) {
+            try!(rmp::encode::write_uint(&mut w, range.min));
+            try!(rmp::encode::write_uint(&mut w, range.max));
+            try!(data.write(&mut w));
+        }
+        return Ok(())
+    }
+
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+        let len = try!(rmp::decode::read_array_size(&mut r));
+        let mut tree = IntervalTree::new();
+        for _ in 0..len {
+            let rng = try!(parse_range(&mut r));
+            let data = try!(T::read(&mut r));
+            tree.insert(rng, data);
+        }
+        return Ok( tree );
+    }
 }
 
-#[must_use]
-pub fn serialize<'a>(db: &DB) -> Result<Vec<u8>, DBError<'a>> {
-    let mut buf = Vec::new();
-    try!(write_db(db, &mut buf));
-    return Ok(buf);
+impl<T: Serialized> Serialized for BTreeMap<String, IntervalTree<T>> {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+        try!(rmp::encode::write_map_len(&mut w, self.len() as u32));
+        for (name, tree) in self {
+            try!(rmp::encode::write_str_len(&mut w, name.len() as u32));
+            try!(w.write_all(&name.as_ref()));
+            try!(tree.write(&mut w))
+        }
+    return Ok(())
+    }
+
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+        let len = try!(rmp::decode::read_map_size(&mut r));
+        let mut res = BTreeMap::new();
+        for _ in 0..len {
+            let tbl_name = try!(parse_string(&mut r));
+            let tree = try!(IntervalTree::<T>::read(&mut r));
+            res.insert(tbl_name, tree);
+        }
+        return Ok( res );
+    }
 }
 
-#[must_use]
-pub fn deserialize<'a>(buf: Vec<u8>) -> Result<DB, DBError<'a>> {
-    let mut db = DB::new();
-    try!(read_db(&mut db, &mut Cursor::new(buf)));
-    return Ok(db);
+impl Serialized for DB {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+        try!(self.obj_map.write(&mut w));
+        try!(self.bit_map.write(&mut w));
+        return Ok(());
+    }
+
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+        let objects = try!(BTreeMap::<String, IntervalTree<Object>>::read(r));
+        let bitmaps = try!(BTreeMap::<String, IntervalTree<Bitmap>>::read(r));
+        return Ok( DB::new_from_data(objects,bitmaps) );
+    }
 }
 
-#[must_use]
-pub fn save_to_file<'a>(db: DB, filename: &String) -> Result<(), DBError<'a>> {
-    let mut f = try!(File::create(filename));
-    let flat = db.to_flat();
-    try!(write_flat(flat, &mut f));
-    return Ok(());
+impl DB {
+    #[must_use]
+    pub fn serialize<'a>(&self) -> Result<Vec<u8>, DBError<'a>> {
+        let mut buf = Vec::new();
+        try!(self.write(&mut buf));
+        return Ok(buf);
+    }
+
+    #[must_use]
+    pub fn deserialize<'a>(buf: Vec<u8>) -> Result<DB, DBError<'a>> {
+        let db = try!(DB::read(&mut Cursor::new(buf)));
+        return Ok(db);
+    }
+
+    #[must_use]
+    pub fn save_to_file<'a>(&self, filename: &String) -> Result<(), DBError<'a>> {
+        let mut f = try!(File::create(filename));
+        try!(self.write(&mut f));
+        return Ok(());
+    }
+
+    #[must_use]
+    pub fn new_from_file<'a>(filename: &String) -> Result<DB, DBError<'a>> {
+        let mut f = try!(File::open(filename));
+        let db = try!(DB::read(&mut f));
+        return Ok(db);
+    }
 }
 
-#[must_use]
-pub fn new_from_file<'a>(filename: &String) -> Result<DB, DBError<'a>> {
-    let mut f = try!(File::open(filename));
-    let mut db = DB::new();
-    try!(read_db(&mut db, &mut f));
-    return Ok(db);
-}
 
 #[test]
 pub fn test_serialize() {
 
     let mut db = DB::new();
     let tbl = "foo".to_string();
-    db.insert(&tbl,
+    db.insert_object(&tbl,
               Range::new(3, 4),
-              Content::Data("foo".to_string().into_bytes()));
-    db.insert(&tbl,
+              Object{data: "foo".into()}); 
+    db.insert_object(&tbl,
               Range::new(4, 5),
-              Content::Data("foo".to_string().into_bytes()));
-    db.insert(&tbl,
+              Object{data: "foo".into()});
+    db.insert_object(&tbl,
               Range::new(5, 6),
-              Content::Data("foo".to_string().into_bytes()));
+              Object{data: "foo".into()});
 
-    let bin = serialize(&db).unwrap();
+    let bin = db.serialize().unwrap();
     let hex: Vec<String> = bin.iter().map(|b| format!("{:02X}", b)).collect();
     println!("{}", hex.join(" "));
-    let db2 = deserialize(bin).unwrap();
-    let db2_keys = db2.query(&tbl, Range::new(0, 100))
+    let db2 = DB::deserialize(bin).unwrap();
+    let db2_keys = db2.query_object(&tbl, Range::new(0, 100))
                       .unwrap()
                       .map(|(r, _)| r.clone())
                       .collect::<Vec<Range>>();
-    let db1_keys = db.query(&tbl, Range::new(0, 100))
+    let db1_keys = db.query_object(&tbl, Range::new(0, 100))
                      .unwrap()
                      .map(|(r, _)| r.clone())
                      .collect::<Vec<Range>>();
