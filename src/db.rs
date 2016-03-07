@@ -86,20 +86,26 @@ impl DB {
 
     fn delete_bitmaps_from_tree(&mut self, table: &String, bitmaps: &Vec<(Range, Bitmap)>) {
         for &(rng, _) in bitmaps {
-            self.obj_map.get_mut(table).map(|mut tree| tree.delete(rng));
+            self.obj_map.get_mut(table).map(|mut tree| { println!("real delete rng: {:?}", rng); tree.delete(rng) });
         };
     }
 
     fn insert_bitmap(&mut self, table: &String, r: Range, d: Bitmap) {
+            println!("insert: {:?} {:?}", &r, &d);
             assert_eq!(d.data.len() as u64, d.entry_size * r.len());
             self.add_table(table);
 
             let merge_partners = self.get_overlaping_bitmaps(table, extend_range(r), d.entry_size);
+
+            println!("merge partners: {:?}", &merge_partners);
             self.delete_bitmaps_from_tree(table, &merge_partners);
             let (new_range, new_bitmap) = d.merge_bitmaps(r, merge_partners);
 
+            println!("new data: {:?} {:?}", &new_range, &new_bitmap);
             let mut tree = self.bit_map.get_mut(table).unwrap();
+            //println!("tree before: {:?}", &tree);
             tree.insert(new_range, new_bitmap);
+            //println!("tree after: {:?}", &tree);
     }
 
     fn insert_subrange_bitmap(&mut self,
