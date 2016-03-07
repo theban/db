@@ -22,7 +22,7 @@ license = "GPL-2.0"
 #time = "*"
 
 [dependencies.interval_tree]
-git = "file:/home/me/proggen/rust/interval_tree"
+git = "https://github.com/eqv/interval_tree"
 
 [dependencies.rmp]
 rmp = "0.7.3"
