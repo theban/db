@@ -86,7 +86,7 @@ impl DB {
 
     fn delete_bitmaps_from_tree(&mut self, table: &String, bitmaps: &Vec<(Range, Bitmap)>) {
         for &(rng, _) in bitmaps {
-            self.obj_map.get_mut(table).map(|mut tree| { println!("real delete rng: {:?}", rng); tree.delete(rng) });
+            self.bit_map.get_mut(table).map(|mut tree| { println!("real delete rng: {:?}", rng); tree.delete(rng) });
         };
     }
 
@@ -103,9 +103,7 @@ impl DB {
 
             println!("new data: {:?} {:?}", &new_range, &new_bitmap);
             let mut tree = self.bit_map.get_mut(table).unwrap();
-            //println!("tree before: {:?}", &tree);
             tree.insert(new_range, new_bitmap);
-            //println!("tree after: {:?}", &tree);
     }
 
     fn insert_subrange_bitmap(&mut self,
