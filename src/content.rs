@@ -22,6 +22,13 @@ impl<'a> BitmapSlice<'a> {
     }
 }
 
+impl Object {
+    pub fn new(data: Vec<u8>) -> Object {
+        return Object{data: data}
+    }
+
+}
+
 impl Bitmap {
 
     pub fn new(es: u64, data: Vec<u8>) -> Bitmap {
