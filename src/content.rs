@@ -1,4 +1,3 @@
-use std::cmp;
 use ::interval_tree::Range;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -54,7 +53,7 @@ impl Bitmap {
         }
     }
 
-    pub fn merge_bitmaps(&self, mut data_range: Range, merge_partners: Vec<(Range, Bitmap)>) -> (Range, Bitmap) {
+    pub fn merge_bitmaps(&self, data_range: Range, merge_partners: Vec<(Range, Bitmap)>) -> (Range, Bitmap) {
         let mut new_range = data_range.clone();
         for &(rng, ref map) in &merge_partners {
             assert_eq!(map.entry_size, self.entry_size);

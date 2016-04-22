@@ -129,7 +129,7 @@ impl DB {
         }
     }
 
-    fn delete_bitmap(&mut self, table: &String, range_to_remove: Range, d: Bitmap) {
+    pub fn delete_bitmap(&mut self, table: &String, range_to_remove: Range, d: Bitmap) {
         let bitmaps_to_delete = self.get_overlaping_bitmaps(table, range_to_remove, d.entry_size);
         self.delete_bitmaps_from_tree(table, &bitmaps_to_delete);
         for (rng, data) in bitmaps_to_delete {

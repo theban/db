@@ -125,7 +125,7 @@ impl<T: Serialized+Debug> Serialized for BTreeMap<String, IntervalTree<T>> {
     fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
         let len = try!(rmp::decode::read_map_size(&mut r));
         let mut res = BTreeMap::new();
-        for i in 0..len {
+        for _ in 0..len {
             let tbl_name = try!(parse_string(&mut r));
             let tree = try!(IntervalTree::<T>::read(&mut r));
             res.insert(tbl_name, tree);
@@ -236,12 +236,12 @@ pub fn test_serialize_bitmaps() {
     let db2 = DB::deserialize(bin).unwrap();
     let db2_values = db2.query_bitmap(&tbl, Range::new(6, 7))
                       .unwrap()
-                      .map(|(r, b)| b.data.to_vec())
+                      .map(|(_, b)| b.data.to_vec())
                       .collect::<Vec<Vec<u8>>>();
 
     let db1_values = db.query_bitmap(&tbl, Range::new(6, 7))
                       .unwrap()
-                      .map(|(r, b)| b.data.to_vec())
+                      .map(|(_, b)| b.data.to_vec())
                       .collect::<Vec<Vec<u8>>>();
     assert_eq!(db1_values, db2_values);
 }
