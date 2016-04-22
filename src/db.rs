@@ -90,7 +90,7 @@ impl DB {
         };
     }
 
-    fn insert_bitmap(&mut self, table: &String, r: Range, d: Bitmap) {
+    pub fn insert_bitmap(&mut self, table: &String, r: Range, d: Bitmap) {
             assert_eq!(d.data.len() as u64, d.entry_size * r.len());
             self.add_table(table);
 

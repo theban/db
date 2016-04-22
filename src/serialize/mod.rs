@@ -16,6 +16,7 @@ use content::Object;
 use dberror::DBError;
 use self::interval_tree::Range;
 use self::interval_tree::IntervalTree;
+use std::fmt::Debug;
 
 trait Serialized where Self:Sized{
     fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>>;
@@ -60,6 +61,10 @@ impl Serialized for Bitmap {
     }
 
     fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+        let len = try!(rmp::decode::read_array_size(&mut r));
+        if len != 2 {
+            return Err(DBError::FileFormatError("BitMap should have length 2".into()));
+        }
         let ds = try!(rmp::decode::read_u64_loosely(&mut r));
         let vec = try!(parse_bindata(&mut r));
         let data = Bitmap{entry_size: ds, data:vec};
@@ -97,7 +102,7 @@ impl<T: Serialized> Serialized for IntervalTree<T> {
     fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
         let len = try!(rmp::decode::read_array_size(&mut r));
         let mut tree = IntervalTree::new();
-        for _ in 0..len {
+        for _ in 0..(len/3) {
             let rng = try!(parse_range(&mut r));
             let data = try!(T::read(&mut r));
             tree.insert(rng, data);
@@ -106,7 +111,7 @@ impl<T: Serialized> Serialized for IntervalTree<T> {
     }
 }
 
-impl<T: Serialized> Serialized for BTreeMap<String, IntervalTree<T>> {
+impl<T: Serialized+Debug> Serialized for BTreeMap<String, IntervalTree<T>> {
     fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
         try!(rmp::encode::write_map_len(&mut w, self.len() as u32));
         for (name, tree) in self {
@@ -120,7 +125,7 @@ impl<T: Serialized> Serialized for BTreeMap<String, IntervalTree<T>> {
     fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
         let len = try!(rmp::decode::read_map_size(&mut r));
         let mut res = BTreeMap::new();
-        for _ in 0..len {
+        for i in 0..len {
             let tbl_name = try!(parse_string(&mut r));
             let tree = try!(IntervalTree::<T>::read(&mut r));
             res.insert(tbl_name, tree);
@@ -131,12 +136,17 @@ impl<T: Serialized> Serialized for BTreeMap<String, IntervalTree<T>> {
 
 impl Serialized for DB {
     fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+        try!(rmp::encode::write_array_len(&mut w, 2 as u32));
         try!(self.obj_map.write(&mut w));
         try!(self.bit_map.write(&mut w));
         return Ok(());
     }
 
     fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+        let len = try!(rmp::decode::read_array_size(&mut r));
+        if len != 2 {
+            return Err(DBError::FileFormatError("DB should have length 2".into()));
+        }
         let objects = try!(BTreeMap::<String, IntervalTree<Object>>::read(r));
         let bitmaps = try!(BTreeMap::<String, IntervalTree<Bitmap>>::read(r));
         return Ok( DB::new_from_data(objects,bitmaps) );
@@ -174,7 +184,7 @@ impl DB {
 
 
 #[test]
-pub fn test_serialize() {
+pub fn test_serialize_objects() {
 
     let mut db = DB::new();
     let tbl = "foo".to_string();
@@ -190,7 +200,7 @@ pub fn test_serialize() {
 
     let bin = db.serialize().unwrap();
     let hex: Vec<String> = bin.iter().map(|b| format!("{:02X}", b)).collect();
-    println!("{}", hex.join(" "));
+    println!("serialized {}", hex.join(" "));
     let db2 = DB::deserialize(bin).unwrap();
     let db2_keys = db2.query_object(&tbl, Range::new(0, 100))
                       .unwrap()
@@ -201,4 +211,37 @@ pub fn test_serialize() {
                      .map(|(r, _)| r.clone())
                      .collect::<Vec<Range>>();
     assert_eq!(db1_keys, db2_keys);
+}
+
+
+#[test]
+pub fn test_serialize_bitmaps() {
+
+    let mut db = DB::new();
+
+    let tbl = "too".to_string();
+
+    db.insert_bitmap(&tbl,
+              Range::new(5, 7),
+              Bitmap::new(1, "goo".into()));
+    db.insert_bitmap(&tbl,
+              Range::new(6, 8),
+              Bitmap::new(1, "bar".into()));
+
+    let bin = db.serialize().unwrap();
+    let hex: Vec<String> = bin.iter().map(|b| format!("{:02X}", b)).collect();
+
+    println!("serialized {}", hex.join(" "));
+
+    let db2 = DB::deserialize(bin).unwrap();
+    let db2_values = db2.query_bitmap(&tbl, Range::new(6, 7))
+                      .unwrap()
+                      .map(|(r, b)| b.data.to_vec())
+                      .collect::<Vec<Vec<u8>>>();
+
+    let db1_values = db.query_bitmap(&tbl, Range::new(6, 7))
+                      .unwrap()
+                      .map(|(r, b)| b.data.to_vec())
+                      .collect::<Vec<Vec<u8>>>();
+    assert_eq!(db1_values, db2_values);
 }

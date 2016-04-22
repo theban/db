@@ -12,6 +12,7 @@ pub struct BitmapSlice<'a>{
     pub data: &'a [u8],
 }
 
+#[derive(Debug)]
 pub struct Object {
     pub data: Vec<u8>
 }
