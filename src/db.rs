@@ -121,17 +121,13 @@ impl DB {
                                        old_bitmap: Bitmap,
                                        range_to_remove: Range) {
 
-        println!("old range: {:?}", &old_range);
-        println!("range to remove: {:?}", &range_to_remove);
 
         if (old_range.min <= range_to_remove.min) && (range_to_remove.min > 0){
             let first_part = Range::new(old_range.min, range_to_remove.min);
-            println!("first part: {:?}", &first_part);
             self.insert_subrange_bitmap(table, old_range, first_part, &old_bitmap)
         }
         if (range_to_remove.max <= old_range.max) && (range_to_remove.max < u64::MAX){
             let last_part = Range::new(range_to_remove.max, old_range.max);
-            println!("last part: {:?}", &last_part);
             self.insert_subrange_bitmap(table, old_range, last_part, &old_bitmap)
         }
     }

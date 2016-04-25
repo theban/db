@@ -24,7 +24,7 @@ license = "GPL-2.0"
 [dependencies.interval_tree]
 git = "https://github.com/eqv/interval_tree"
 
-[dependencies.rmp]
+[dependencies]
 rmp = "0.7.3"
 
 #[lib]

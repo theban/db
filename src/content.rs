@@ -36,14 +36,11 @@ impl Bitmap {
     }
 
     pub fn to_subslice(&self, data_range: Range,  mut restriction_range: Range) -> BitmapSlice{
-        println!(" to subslice {:?} {:?}", data_range, restriction_range);
 
         restriction_range = restriction_range.get_intersection(&data_range);
         let num_entries = restriction_range.len();
-        println!("intersection {:?} {}", restriction_range, num_entries);
         let startoffset = (restriction_range.min - data_range.min)*self.entry_size;
         let endoffset = startoffset+num_entries*self.entry_size;
-        println!(" start/end offsets {} {}", startoffset, endoffset);
         assert!( startoffset <= self.data.len() as u64 );
         assert!( endoffset <= self.data.len() as u64 );
         return BitmapSlice{entry_size: self.entry_size, data: &self.data[startoffset as usize .. endoffset as usize ]}
