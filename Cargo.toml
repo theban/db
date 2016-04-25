@@ -1,6 +1,6 @@
 [package]
 name = "tag_db"
-version = "0.3.5"
+version = "0.3.6"
 authors = ["coco <coco@hexgolems.com>"]
 
 description = "Using interval trees to create a simple interval database"
