@@ -5,6 +5,7 @@ use self::interval_tree::IntervalTree;
 use self::interval_tree::RangePairIter;
 
 use std::collections::BTreeMap;
+use std::u64;
 
 use content::Object;
 use content::Bitmap;
@@ -119,12 +120,18 @@ impl DB {
                                        old_range: Range,
                                        old_bitmap: Bitmap,
                                        range_to_remove: Range) {
-        if old_range.min <= range_to_remove.min-1 {
-            let first_part = Range::new(old_range.min, range_to_remove.min-1);
+
+        println!("old range: {:?}", &old_range);
+        println!("range to remove: {:?}", &range_to_remove);
+
+        if (old_range.min <= range_to_remove.min) && (range_to_remove.min > 0){
+            let first_part = Range::new(old_range.min, range_to_remove.min);
+            println!("first part: {:?}", &first_part);
             self.insert_subrange_bitmap(table, old_range, first_part, &old_bitmap)
         }
-        if range_to_remove.max+1 <= old_range.max {
-            let last_part = Range::new(range_to_remove.max+1, old_range.max);
+        if (range_to_remove.max <= old_range.max) && (range_to_remove.max < u64::MAX){
+            let last_part = Range::new(range_to_remove.max, old_range.max);
+            println!("last part: {:?}", &last_part);
             self.insert_subrange_bitmap(table, old_range, last_part, &old_bitmap)
         }
     }
@@ -133,7 +140,7 @@ impl DB {
         let bitmaps_to_delete = self.get_overlaping_bitmaps(table, range_to_remove, entry_size);
         self.delete_bitmaps_from_tree(table, &bitmaps_to_delete);
         for (rng, data) in bitmaps_to_delete {
-            self.add_trunkated_version_of_bitmap(table, rng, data, range_to_remove)
+            self.add_trunkated_version_of_bitmap(table, rng, data, extend_range(range_to_remove))
         }
     }
 
@@ -191,49 +198,49 @@ fn test_bitmaps_insert() {
     let mut db = DB::new();
     let tbl = "tbl".to_string();
 
-    //db.insert_bitmap(&tbl,
-    //          Range::new(2, 7),
-    //          Bitmap{ entry_size: 1, data: "foofoo".into() }
-    //          );
+    db.insert_bitmap(&tbl,
+              Range::new(2, 7),
+              Bitmap{ entry_size: 1, data: "foofoo".into() }
+              );
 
-    //db.insert_bitmap(&tbl,
-    //          Range::new(5, 10),
-    //          Bitmap{ entry_size: 1, data: "barbar".into() }
-    //          );
+    db.insert_bitmap(&tbl,
+              Range::new(5, 10),
+              Bitmap{ entry_size: 1, data: "barbar".into() }
+              );
 
-    //let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 50));
-    //assert_eq!(is, vec![(Range::new(2, 10), Bitmap{entry_size: 1, data: "foobarbar".into() } ) ]);
+    let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 50));
+    assert_eq!(is, vec![(Range::new(2, 10), Bitmap{entry_size: 1, data: "foobarbar".into() } ) ]);
 
-    //db.insert_bitmap(&tbl,
-    //          Range::new(7, 9),
-    //          Bitmap{ entry_size: 1, data: "goo".into() }
-    //          );
+    db.insert_bitmap(&tbl,
+              Range::new(7, 9),
+              Bitmap{ entry_size: 1, data: "goo".into() }
+              );
 
-    //let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 50));
-    //assert_eq!(is, vec![(Range::new(2, 10), Bitmap{entry_size: 1, data: "foobagoor".into() } ) ]);
+    let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 50));
+    assert_eq!(is, vec![(Range::new(2, 10), Bitmap{entry_size: 1, data: "foobagoor".into() } ) ]);
 
-    //db.insert_bitmap(&tbl,
-    //          Range::new(7, 9),
-    //          Bitmap{ entry_size: 2, data: "googoo".into() }
-    //          );
+    db.insert_bitmap(&tbl,
+              Range::new(7, 9),
+              Bitmap{ entry_size: 2, data: "googoo".into() }
+              );
 
-    //let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 50));
-    //assert_eq!(is, vec![
-    //           (Range::new(2, 10), Bitmap{entry_size: 1, data: "foobagoor".into() } ), 
-    //           (Range::new(7, 9), Bitmap{entry_size: 2, data: "googoo".into() } )
-    //           ]);
+    let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 50));
+    assert_eq!(is, vec![
+               (Range::new(2, 10), Bitmap{entry_size: 1, data: "foobagoor".into() } ), 
+               (Range::new(7, 9), Bitmap{entry_size: 2, data: "googoo".into() } )
+               ]);
 
-    //let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 3));
-    //assert_eq!(is, vec![
-    //           (Range::new(2, 3), Bitmap{entry_size: 1, data: "fo".into() } ), 
-    //           ]);
+    let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 3));
+    assert_eq!(is, vec![
+               (Range::new(2, 3), Bitmap{entry_size: 1, data: "fo".into() } ), 
+               ]);
 
-    //db.delete_bitmap(&tbl,1, Range::new(0, 1000));
-    //db.delete_bitmap(&tbl,2, Range::new(0, 1000));
-    //db.delete_bitmap(&tbl,3, Range::new(0, 1000));
+    db.delete_bitmap(&tbl,1, Range::new(0, 1000));
+    db.delete_bitmap(&tbl,2, Range::new(0, 1000));
+    db.delete_bitmap(&tbl,3, Range::new(0, 1000));
 
-    //let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 1000));
-    //assert_eq!(is, vec![ ]);
+    let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 1000));
+    assert_eq!(is, vec![ ]);
 
     db.insert_bitmap(&tbl,
               Range::new(0, 10),
@@ -241,16 +248,18 @@ fn test_bitmaps_insert() {
               );
     db.delete_bitmap(&tbl,1, Range::new(2, 3));
     let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 1000));
+
     assert_eq!(is, vec![
                (Range::new(0, 1), Bitmap{entry_size: 1, data: "go".into() } ), 
                (Range::new(4, 10), Bitmap{entry_size: 1, data: "ooazabu".into() } ), 
                ]);
 
-    //is = db.query(&tbl, Range::new(0, 100))
-    //       .unwrap()
-    //       .map(|(r, _)| r.clone())
-    //       .collect::<Vec<Range>>();
-    //assert_eq!(is, vec![Range::new(5, 6)]);
+    db.delete_bitmap(&tbl,1, Range::new(0, 0));
+    let is = query_bitmap_test(&mut db, &tbl, Range::new(0, 1000));
 
-    //assert!(db.query(&"bar".to_string(), Range::new(0, 100)).is_none());
+    assert_eq!(is, vec![
+               (Range::new(1, 1), Bitmap{entry_size: 1, data: "o".into() } ), 
+               (Range::new(4, 10), Bitmap{entry_size: 1, data: "ooazabu".into() } ), 
+               ]);
+
 }
