@@ -227,6 +227,7 @@ pub fn test_serialize_bitmaps() {
               Bitmap::new(1, "bar".into()));
 
     let bin = db.serialize().unwrap();
+    let hex: Vec<String> = bin.iter().map(|b| format!("{:02X}", b)).collect();
 
     let db2 = DB::deserialize(bin).unwrap();
     let db2_values = db2.query_bitmap(&tbl, Range::new(6, 7))
