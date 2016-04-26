@@ -58,14 +58,15 @@ impl Bitmap {
     }
 
     pub fn merge_bitmaps(self, data_range: Range, merge_partners: Vec<(Range, Bitmap)>) -> (Range, Bitmap) {
-        if merge_partners.len() == 0 {
-            return (data_range, self);
-        }
 
         let mut new_range = data_range.clone();
         for &(rng, ref map) in &merge_partners {
             assert_eq!(map.entry_size, self.entry_size);
             new_range = new_range.get_union(&rng)
+        }
+
+        if new_range == data_range {
+            return (data_range, self);
         }
 
         let combined_len = ( new_range.len()*self.entry_size ) as usize;
