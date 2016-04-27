@@ -1,5 +1,5 @@
 extern crate memrange;
-extern crate interval_tree;
+extern crate theban_interval_tree;
 
 pub mod dberror;
 pub mod db;

@@ -1,4 +1,4 @@
-use ::interval_tree::RangePairIter;
+use ::theban_interval_tree::RangePairIter;
 use ::memrange::Range;
 
 use content::Bitmap;

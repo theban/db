@@ -1,9 +1,9 @@
-extern crate interval_tree;
+extern crate theban_interval_tree;
 extern crate memrange;
 
 use self::memrange::Range;
-use self::interval_tree::IntervalTree;
-use self::interval_tree::RangePairIter;
+use self::theban_interval_tree::IntervalTree;
+use self::theban_interval_tree::RangePairIter;
 
 use std::collections::BTreeMap;
 use std::u64;

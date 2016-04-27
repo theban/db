@@ -1,5 +1,5 @@
 extern crate rmp;
-extern crate interval_tree;
+extern crate theban_interval_tree;
 extern crate memrange;
 
 use std::collections::BTreeMap;
@@ -16,7 +16,7 @@ use content::Bitmap;
 use content::Object;
 use dberror::DBError;
 use memrange::Range;
-use self::interval_tree::IntervalTree;
+use self::theban_interval_tree::IntervalTree;
 use std::fmt::Debug;
 
 trait Serialized where Self:Sized{

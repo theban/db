@@ -1,5 +1,5 @@
 [package]
-name = "tag_db"
+name = "theban_db"
 version = "0.4.0"
 authors = ["coco <coco@hexgolems.com>"]
 
@@ -16,20 +16,9 @@ keywords = ["interval","range","spatial","database","db"]
 # crates.io will validate the license provided against a whitelist of known
 # license identifiers from http://spdx.org/licenses/. Multiple licenses can
 # be separated with a `/`
-license = "GPL-2.0"
-
-#rand = "*" # Or a specific version
-#time = "*"
-
-[dependencies.memrange]
-git = "https://github.com/theban/memrange"
-
-[dependencies.interval_tree]
-git = "https://github.com/eqv/interval_tree"
+license-file = "LICENSE"
 
 [dependencies]
 rmp = "0.7.3"
-
-#[lib]
-#name = "tag_db"
-#crate-type = ["dylib"]
+memrange = "0.1.*"
+theban_interval_tree = "0.6.*"
