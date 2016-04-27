@@ -17,17 +17,6 @@ pub struct DB {
 }
 
 
-fn extend_range(mut r: Range) -> Range {
-    if r.min > 0 {
-        r.min -= 1
-    }
-    if r.max < !0 {
-        r.max += 1
-    }
-    return r;
-    //return Range::new(r.min.saturating_sub(1), r.max.saturating_add(1));
-}
-
 
 impl DB {
     pub fn new() -> DB {
@@ -95,7 +84,7 @@ impl DB {
             assert_eq!(d.data.len() as u64, d.entry_size * r.len());
             self.add_table(table);
 
-            let merge_partners = self.get_overlaping_bitmaps(table, extend_range(r), d.entry_size);
+            let merge_partners = self.get_overlaping_bitmaps(table, r.get_extended(), d.entry_size);
 
             self.delete_bitmaps_from_tree(table, &merge_partners);
             let (new_range, new_bitmap) = d.merge_bitmaps(r, merge_partners);
@@ -115,19 +104,34 @@ impl DB {
         tree.insert(new_range, data);
     }
 
+    //fn add_trunkated_version_of_bitmap(&mut self,
+    //                                   table: &String,
+    //                                   old_range: Range,
+    //                                   old_bitmap: Bitmap,
+    //                                   range_to_remove: Range) {
+
+
+    //    if (old_range.min <= range_to_remove.min) && (range_to_remove.min > 0){
+    //        let first_part = Range::new(old_range.min, range_to_remove.min);
+    //        self.insert_subrange_bitmap(table, old_range, first_part, &old_bitmap)
+    //    }
+    //    if (range_to_remove.max <= old_range.max) && (range_to_remove.max < u64::MAX){
+    //        let last_part = Range::new(range_to_remove.max, old_range.max);
+    //        self.insert_subrange_bitmap(table, old_range, last_part, &old_bitmap)
+    //    }
+    //}
+
     fn add_trunkated_version_of_bitmap(&mut self,
                                        table: &String,
                                        old_range: Range,
                                        old_bitmap: Bitmap,
                                        range_to_remove: Range) {
 
-
-        if (old_range.min <= range_to_remove.min) && (range_to_remove.min > 0){
-            let first_part = Range::new(old_range.min, range_to_remove.min);
+        let (first,last) = old_range.get_difference(&range_to_remove);
+        if let Some(first_part) = first {
             self.insert_subrange_bitmap(table, old_range, first_part, &old_bitmap)
         }
-        if (range_to_remove.max <= old_range.max) && (range_to_remove.max < u64::MAX){
-            let last_part = Range::new(range_to_remove.max, old_range.max);
+        if let Some(last_part) = last {
             self.insert_subrange_bitmap(table, old_range, last_part, &old_bitmap)
         }
     }
@@ -136,7 +140,7 @@ impl DB {
         let bitmaps_to_delete = self.get_overlaping_bitmaps(table, range_to_remove, entry_size);
         self.delete_bitmaps_from_tree(table, &bitmaps_to_delete);
         for (rng, data) in bitmaps_to_delete {
-            self.add_trunkated_version_of_bitmap(table, rng, data, extend_range(range_to_remove))
+            self.add_trunkated_version_of_bitmap(table, rng, data, range_to_remove.get_extended());
         }
     }
 
