@@ -1,5 +1,6 @@
 extern crate rmp;
 extern crate interval_tree;
+extern crate memrange;
 
 use std::collections::BTreeMap;
 use std::u64;
@@ -14,7 +15,7 @@ use db::DB;
 use content::Bitmap;
 use content::Object;
 use dberror::DBError;
-use self::interval_tree::Range;
+use memrange::Range;
 use self::interval_tree::IntervalTree;
 use std::fmt::Debug;
 

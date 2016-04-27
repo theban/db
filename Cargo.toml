@@ -1,6 +1,6 @@
 [package]
 name = "tag_db"
-version = "0.3.10"
+version = "0.4.0"
 authors = ["coco <coco@hexgolems.com>"]
 
 description = "Using interval trees to create a simple interval database"
@@ -20,6 +20,9 @@ license = "GPL-2.0"
 
 #rand = "*" # Or a specific version
 #time = "*"
+
+[dependencies.memrange]
+git = "https://github.com/theban/memrange"
 
 [dependencies.interval_tree]
 git = "https://github.com/eqv/interval_tree"

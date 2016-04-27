@@ -1,6 +1,7 @@
 extern crate interval_tree;
+extern crate memrange;
 
-use self::interval_tree::Range;
+use self::memrange::Range;
 use self::interval_tree::IntervalTree;
 use self::interval_tree::RangePairIter;
 

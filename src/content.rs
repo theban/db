@@ -1,4 +1,4 @@
-use ::interval_tree::Range;
+use ::memrange::Range;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Bitmap {

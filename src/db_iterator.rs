@@ -1,5 +1,5 @@
 use ::interval_tree::RangePairIter;
-use ::interval_tree::Range;
+use ::memrange::Range;
 
 use content::Bitmap;
 use content::BitmapSlice;

@@ -1,4 +1,4 @@
-
+extern crate memrange;
 extern crate interval_tree;
 
 pub mod dberror;
@@ -12,4 +12,3 @@ pub use content::Bitmap;
 pub use content::BitmapSlice;
 pub use content::Object;
 pub use dberror::DBError;
-pub use self::interval_tree::Range;
