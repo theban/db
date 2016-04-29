@@ -103,23 +103,6 @@ impl DB {
         tree.insert(new_range, data);
     }
 
-    //fn add_trunkated_version_of_bitmap(&mut self,
-    //                                   table: &String,
-    //                                   old_range: Range,
-    //                                   old_bitmap: Bitmap,
-    //                                   range_to_remove: Range) {
-
-
-    //    if (old_range.min <= range_to_remove.min) && (range_to_remove.min > 0){
-    //        let first_part = Range::new(old_range.min, range_to_remove.min);
-    //        self.insert_subrange_bitmap(table, old_range, first_part, &old_bitmap)
-    //    }
-    //    if (range_to_remove.max <= old_range.max) && (range_to_remove.max < u64::MAX){
-    //        let last_part = Range::new(range_to_remove.max, old_range.max);
-    //        self.insert_subrange_bitmap(table, old_range, last_part, &old_bitmap)
-    //    }
-    //}
-
     fn add_trunkated_version_of_bitmap(&mut self,
                                        table: &String,
                                        old_range: Range,
