@@ -13,6 +13,10 @@ impl<'a> BitmapSliceIter<'a> {
     pub fn new(orig: RangePairIter<Bitmap>, rng: Range) -> BitmapSliceIter {
         return BitmapSliceIter{orig: orig, orig_rng: rng};
     }
+
+    pub fn get_range(&self) -> Range {
+        return self.orig_rng;
+    }
 }
 
 impl<'a> Iterator for BitmapSliceIter<'a> {
