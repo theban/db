@@ -157,7 +157,7 @@ fn test_ranges() {
                    .map(|(r, _)| r.clone())
                    .collect::<Vec<Range>>();
     assert_eq!(is, vec![Range::new(3, 4), Range::new(4, 5)]);
-    db.delete_all_objects(&tbl, Range::new(3, 4));
+    db.delete_intersecting_objects(&tbl, Range::new(3, 4));
     is = db.query_object(&tbl, Range::new(0, 100))
            .unwrap()
            .map(|(r, _)| r.clone())
