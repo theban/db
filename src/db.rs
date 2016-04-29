@@ -46,7 +46,7 @@ impl DB {
         };
     }
 
-    pub fn delete_all_objects(&mut self, table: &String, r: Range) {
+    pub fn delete_intersecting_objects(&mut self, table: &String, r: Range) {
         let ranges = if let Some(iter) = self.query_object(table, r) {
             iter.map(|(range, _)| range.clone()).collect::<Vec<Range>>()
         } else {
