@@ -17,8 +17,6 @@ pub struct DB {
     pub bit_map: BTreeMap<String, IntervalTree<Bitmap>>,
 }
 
-
-
 impl DB {
     pub fn new() -> DB {
         return DB { obj_map: BTreeMap::new(), bit_map: BTreeMap::new() };
@@ -152,7 +150,7 @@ impl DB {
         }
     }
 
-    fn has_table(&mut self, table: &String) -> bool {
+    pub fn has_table(& self, table: &String) -> bool {
         assert!(self.obj_map.contains_key(table) == self.bit_map.contains_key(table));
         return self.obj_map.contains_key(table);
     }
