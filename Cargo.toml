@@ -1,6 +1,6 @@
 [package]
 name = "theban_db"
-version = "0.5.0"
+version = "0.5.2"
 authors = ["coco <coco@hexgolems.com>"]
 
 description = "Using interval trees to create a simple interval database"
@@ -20,4 +20,4 @@ license-file = "LICENSE"
 [dependencies]
 rmp = "0.7.3"
 memrange = "0.1.*"
-theban_interval_tree = "0.6.*"
+theban_interval_tree = "0.7.*"

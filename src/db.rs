@@ -64,9 +64,9 @@ impl DB {
                               -> Vec<(Range, Bitmap)> {
         let mut res = vec![];
         if let Some(iter) = self.bit_map.get(table).map(|tree| tree.range(r.min,r.max)) {
-            for (ref rng, ref cont) in iter {
-                if cont.entry_size == entry_size && (*rng).intersect(&r) {
-                    res.push((**rng, (*cont).clone()));
+            for (rng, cont) in iter {
+                if cont.entry_size == entry_size && rng.intersect(&r) {
+                    res.push((rng, cont.clone()));
                 }
             }
         }
