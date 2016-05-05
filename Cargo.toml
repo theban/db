@@ -1,6 +1,6 @@
 [package]
 name = "theban_db"
-version = "0.5.2"
+version = "0.6.0"
 authors = ["coco <coco@hexgolems.com>"]
 
 description = "Using interval trees to create a simple interval database"
