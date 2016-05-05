@@ -20,51 +20,51 @@ use self::theban_interval_tree::IntervalTree;
 use std::fmt::Debug;
 
 trait Serialized where Self:Sized{
-    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>>;
-    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>>;
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError>;
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError>;
 }
 
-fn write_vec<'a>(vec: &Vec<u8>, mut w: &mut Write) -> Result<(), DBError<'a>> {
+fn write_vec<'a>(vec: &Vec<u8>, mut w: &mut Write) -> Result<(), DBError> {
     try!(rmp::encode::write_str_len(&mut w, vec.len() as u32));
     try!(w.write_all(vec));
     return Ok(());
 }
 
-fn parse_string<'a>(stream: &mut Read) -> Result<String, DBError<'a>> {
+fn parse_string<'a>(stream: &mut Read) -> Result<String, DBError> {
     let strref = try!(parse_bindata(stream));
     let strval = try!(String::from_utf8(strref));
     return Ok(strval);
 }
 
-fn parse_bindata<'a>(mut stream: &mut Read) -> Result<Vec<u8>, DBError<'a>> {
+fn parse_bindata<'a>(mut stream: &mut Read) -> Result<Vec<u8>, DBError> {
     let len = try!(rmp::decode::read_str_len(&mut stream));
     let ulen = len as usize;
     let mut buf: Vec<u8> = vec![0;ulen];
     let n = try!(rmp::decode::read_full(&mut stream, &mut buf[0..ulen]));
     if n != ulen {
-        return Err(DBError::FileFormatError("unexpected EOF".into()));
+        return Err(DBError::FileFormat("unexpected EOF".into()));
     }
     return Ok(buf);
 }
 
-fn parse_range<'a>(mut r: &mut Read) -> Result<Range, DBError<'a>> {
+fn parse_range<'a>(mut r: &mut Read) -> Result<Range, DBError> {
     let min = try!(rmp::decode::read_u64_loosely(&mut r));
     let max = try!(rmp::decode::read_u64_loosely(&mut r));
     return Ok(Range::new(min, max));
 }
 
 impl Serialized for Bitmap {
-    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError> {
         try!(rmp::encode::write_array_len(&mut w, 2));
         try!(rmp::encode::write_uint(&mut w, self.entry_size));
         try!(write_vec(&self.data, &mut w));
         return Ok(())
     }
 
-    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError> {
         let len = try!(rmp::decode::read_array_size(&mut r));
         if len != 2 {
-            return Err(DBError::FileFormatError("BitMap should have length 2".into()));
+            return Err(DBError::FileFormat("BitMap should have length 2".into()));
         }
         let ds = try!(rmp::decode::read_u64_loosely(&mut r));
         let vec = try!(parse_bindata(&mut r));
@@ -74,12 +74,12 @@ impl Serialized for Bitmap {
 }
 
 impl Serialized for Object {
-    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError> {
         try!(write_vec(&self.data, &mut w));
         return Ok(())
     }
 
-    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError> {
         let vec = try!(parse_bindata(&mut r));
         let data = Object{data: vec};
         return Ok( data );
@@ -88,7 +88,7 @@ impl Serialized for Object {
 }
 
 impl<T: Serialized> Serialized for IntervalTree<T> {
-    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError> {
         let len = self.range(0, u64::MAX).count() as u64;
         assert!(3*len < u32::MAX as u64);
         try!(rmp::encode::write_array_len(&mut w, 3*len as u32));
@@ -100,7 +100,7 @@ impl<T: Serialized> Serialized for IntervalTree<T> {
         return Ok(())
     }
 
-    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError> {
         let len = try!(rmp::decode::read_array_size(&mut r));
         let mut tree = IntervalTree::new();
         for _ in 0..(len/3) {
@@ -113,7 +113,7 @@ impl<T: Serialized> Serialized for IntervalTree<T> {
 }
 
 impl<T: Serialized+Debug> Serialized for BTreeMap<String, IntervalTree<T>> {
-    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError> {
         try!(rmp::encode::write_map_len(&mut w, self.len() as u32));
         for (name, tree) in self {
             try!(rmp::encode::write_str_len(&mut w, name.len() as u32));
@@ -123,7 +123,7 @@ impl<T: Serialized+Debug> Serialized for BTreeMap<String, IntervalTree<T>> {
     return Ok(())
     }
 
-    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError> {
         let len = try!(rmp::decode::read_map_size(&mut r));
         let mut res = BTreeMap::new();
         for _ in 0..len {
@@ -136,17 +136,17 @@ impl<T: Serialized+Debug> Serialized for BTreeMap<String, IntervalTree<T>> {
 }
 
 impl Serialized for DB {
-    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError<'a>> {
+    fn write<'a>(&self, mut w: &mut Write) -> Result<(), DBError> {
         try!(rmp::encode::write_array_len(&mut w, 2 as u32));
         try!(self.obj_map.write(&mut w));
         try!(self.bit_map.write(&mut w));
         return Ok(());
     }
 
-    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError<'a>> {
+    fn read<'a>(mut r: &mut Read) -> Result<Self, DBError> {
         let len = try!(rmp::decode::read_array_size(&mut r));
         if len != 2 {
-            return Err(DBError::FileFormatError("DB should have length 2".into()));
+            return Err(DBError::FileFormat("DB should have length 2".into()));
         }
         let objects = try!(BTreeMap::<String, IntervalTree<Object>>::read(r));
         let bitmaps = try!(BTreeMap::<String, IntervalTree<Bitmap>>::read(r));
@@ -156,27 +156,27 @@ impl Serialized for DB {
 
 impl DB {
     #[must_use]
-    pub fn serialize<'a>(&self) -> Result<Vec<u8>, DBError<'a>> {
+    pub fn serialize<'a>(&self) -> Result<Vec<u8>, DBError> {
         let mut buf = Vec::new();
         try!(self.write(&mut buf));
         return Ok(buf);
     }
 
     #[must_use]
-    pub fn deserialize<'a>(buf: Vec<u8>) -> Result<DB, DBError<'a>> {
+    pub fn deserialize<'a>(buf: Vec<u8>) -> Result<DB, DBError> {
         let db = try!(DB::read(&mut Cursor::new(buf)));
         return Ok(db);
     }
 
     #[must_use]
-    pub fn save_to_file<'a>(&self, filename: &String) -> Result<(), DBError<'a>> {
+    pub fn save_to_file<'a>(&self, filename: &String) -> Result<(), DBError> {
         let mut f = try!(File::create(filename));
         try!(self.write(&mut f));
         return Ok(());
     }
 
     #[must_use]
-    pub fn new_from_file<'a>(filename: &String) -> Result<DB, DBError<'a>> {
+    pub fn new_from_file<'a>(filename: &String) -> Result<DB, DBError> {
         let mut f = try!(File::open(filename));
         let db = try!(DB::read(&mut f));
         return Ok(db);

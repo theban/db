@@ -1,6 +1,6 @@
 use ::memrange::Range;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, RustcEncodable, RustcDecodable)]
 pub struct Bitmap {
     pub entry_size: u64,
     pub data: Vec<u8>,
@@ -11,7 +11,7 @@ pub struct BitmapSlice<'a>{
     pub data: &'a [u8],
 }
 
-#[derive(Debug)]
+#[derive(Debug, RustcEncodable, RustcDecodable)]
 pub struct Object {
     pub data: Vec<u8>
 }

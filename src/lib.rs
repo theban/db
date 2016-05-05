@@ -1,5 +1,7 @@
 extern crate memrange;
 extern crate theban_interval_tree;
+extern crate rustc_serialize;
+#[macro_use] extern crate quick_error;
 
 pub mod dberror;
 pub mod db;
