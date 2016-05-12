@@ -1,4 +1,5 @@
 use ::memrange::Range;
+use std::borrow::Cow;
 
 #[derive(Clone, PartialEq, Debug, RustcEncodable, RustcDecodable)]
 pub struct Bitmap {
@@ -8,7 +9,7 @@ pub struct Bitmap {
 
 pub struct BitmapSlice<'a>{
     pub entry_size: u64,
-    pub data: &'a [u8],
+    pub data: Cow<'a,[u8]>,
 }
 
 #[derive(Debug, RustcEncodable, RustcDecodable)]
@@ -18,7 +19,7 @@ pub struct Object {
 
 impl<'a> BitmapSlice<'a> {
     pub fn to_bitmap(&self) -> Bitmap{
-        return Bitmap{entry_size: self.entry_size, data: self.data.into()}
+        return Bitmap{entry_size: self.entry_size, data: (*self.data).into()}
     }
 }
 
@@ -43,7 +44,8 @@ impl Bitmap {
         let endoffset = startoffset+num_entries*self.entry_size;
         assert!( startoffset <= self.data.len() as u64 );
         assert!( endoffset <= self.data.len() as u64 );
-        return BitmapSlice{entry_size: self.entry_size, data: &self.data[startoffset as usize .. endoffset as usize ]}
+        let slice = &self.data[startoffset as usize .. endoffset as usize ];
+        return BitmapSlice{entry_size: self.entry_size, data: Cow::Borrowed(slice)}
     }
 
     pub fn to_subbitmap(&self, data_range: Range, restriction_range: Range) -> Bitmap{
