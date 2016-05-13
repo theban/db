@@ -21,6 +21,14 @@ impl<'a> BitmapSlice<'a> {
     pub fn to_bitmap(&self) -> Bitmap{
         return Bitmap{entry_size: self.entry_size, data: (*self.data).into()}
     }
+
+    pub fn new_from_owned<'db>(b: Bitmap) -> BitmapSlice<'db>{
+        return BitmapSlice{entry_size: b.entry_size, data: Cow::Owned(b.data.into())}
+    }
+
+    pub fn new_from_borrowed<'db>(b: &'db Bitmap) -> BitmapSlice<'db>{
+        return BitmapSlice{entry_size: b.entry_size, data: Cow::Borrowed(&b.data)}
+    }
 }
 
 impl Object {
